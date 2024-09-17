@@ -6,8 +6,8 @@ import uvicorn
 from app.schemas.learning_path import LPSearchResults ,LP , learning_path_create,Learning_path
 from app.learning_path_data import LEARNING_PATH
 from fastapi.templating import Jinja2Templates
-
-
+from app.core.config import settings
+from app.api.api_v1.api import api_router
 # Create FastAPI instance
 
 BASE_PATH = Path(__file__).resolve().parent
@@ -15,9 +15,9 @@ TEMPLATES = Jinja2Templates(directory=str(BASE_PATH / "templates"))
 
 app = FastAPI(title="fashion API", openapi_url="/openapi.json")
 
-api_router = APIRouter()
+router = APIRouter()
 
-@api_router.get("/", status_code=200)
+@router.get("/", status_code=200)
 def root(request: Request) -> dict:
     """
     Root GET
@@ -27,8 +27,8 @@ def root(request: Request) -> dict:
         {"request": request, "learning_paths": LEARNING_PATH}
     )
 
-app.include_router(api_router)
-
+app.include_router(router)
+app.include_router(api_router, prefix=settings.API_V1_STR)
 
 if __name__ == "__main__":
     # Use this for debugging purposes only
