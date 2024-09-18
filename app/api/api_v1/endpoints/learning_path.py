@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import Any, Optional
@@ -5,9 +6,10 @@ from app import crud
 from app.api import deps
 from app.learning_path_data import LEARNING_PATH
 from app.schemas.learning_path import LPSearchResults ,LP , learning_path_create,Learning_path
-
+import httpx
 
 api_router = APIRouter()
+LEARNING_PATH_SUBREDDITS = ["learning_path", "easylevels", "Toplevels"]
 
 @api_router.get("/{path_id}", status_code=200, response_model=Learning_path)
 def fetch_learning_path(*,path_id:int) -> Any:
@@ -52,3 +54,48 @@ def create_learning_path(*, add_path: learning_path_create) -> dict:
     LEARNING_PATH.append(learning_path_entry.dict())
 
     return learning_path_entry
+
+
+async def get_reddit_top_async(subreddit: str) -> list:
+    async with httpx.AsyncClient() as client:
+        response = await client.get(
+            f"https://www.reddit.com/r/{subreddit}/top.json?sort=top&t=day&limit=5",
+            headers={"User-agent": "learning_path bot 0.1"},
+        )
+
+    subreddit_learning_path = response.json()
+    subreddit_data = []
+    for entry in subreddit_learning_path["data"]["children"]:
+        score = entry["data"]["score"]
+        title = entry["data"]["title"]
+        link = entry["data"]["url"]
+        subreddit_data.append(f"{str(score)}: {title} ({link})")
+    return subreddit_data
+
+
+def get_reddit_top(subreddit: str) -> list:
+    response = httpx.get(
+        f"https://www.reddit.com/r/{subreddit}/top.json?sort=top&t=day&limit=5",
+        headers={"User-agent": "learning_path bot 0.1"},
+    )
+    subreddit_learning_path = response.json()
+    subreddit_data = []
+    for entry in subreddit_learning_path["data"]["children"]:
+        score = entry["data"]["score"]
+        title = entry["data"]["title"]
+        link = entry["data"]["url"]
+        subreddit_data.append(f"{str(score)}: {title} ({link})")
+    return subreddit_data
+
+
+@api_router.get("/ideas/async")
+async def fetch_ideas_async() -> dict:
+    results = await asyncio.gather(
+        *[get_reddit_top_async(subreddit=subreddit) for subreddit in LEARNING_PATH_SUBREDDITS]
+    )
+    return dict(zip(LEARNING_PATH_SUBREDDITS, results))
+
+
+@api_router.get("/ideas/")
+def fetch_ideas() -> dict:
+    return {key: get_reddit_top(subreddit=key) for key in LEARNING_PATH_SUBREDDITS}
