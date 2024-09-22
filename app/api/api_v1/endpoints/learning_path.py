@@ -5,7 +5,7 @@ from typing import Any, Optional
 from app import crud
 from app.api import deps
 from app.learning_path_data import LEARNING_PATH
-from app.schemas.learning_path import LPSearchResults ,LP , learning_path_create,Learning_path
+from app.schemas.learning_path import LPSearchResults ,LP, LPupdate , learning_path_create,Learning_path
 import httpx
 
 api_router = APIRouter()
@@ -54,6 +54,32 @@ def create_learning_path(*, add_path: learning_path_create) -> dict:
     LEARNING_PATH.append(learning_path_entry.dict())
 
     return learning_path_entry
+
+
+
+@api_router.put("/", status_code=201, response_model=LP)
+def update_learning_path(
+    *,
+    learning_path_in: LPupdate,
+    db: Session = Depends(deps.get_db),
+) -> dict:
+    """
+    Update lp in the database.
+    """
+    learning_path = crud.learning_path.get(db, id=learning_path_in.id)
+    if not learning_path:
+        raise HTTPException(
+            status_code=400, detail=f"Learnig_path with ID: {learning_path_in.id} not found."
+        )
+
+    # if recipe.submitter_id != current_user.id:
+    #     raise HTTPException(
+    #         status_code=403, detail=f"You can only update your recipes."
+    #     )
+
+    updated_learning_path = crud.learning_path.update(db=db, db_obj=learning_path, obj_in=learning_path_in)
+    db.commit()
+    return updated_learning_path
 
 
 async def get_reddit_top_async(subreddit: str) -> list:

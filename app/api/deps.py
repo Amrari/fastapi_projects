@@ -1,5 +1,6 @@
 from typing import Generator, Optional
 
+from app import crud
 from app.db.session import SessionLocal
 from fastapi import Depends, HTTPException, status
 from jose import jwt, JWTError
@@ -50,3 +51,13 @@ async def get_current_user(
     if user is None:
         raise credentials_exception
     return user
+
+
+def get_current_active_superuser(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    if not crud.user.is_superuser(current_user):
+        raise HTTPException(
+            status_code=400, detail="The user doesn't have enough privileges"
+        )
+    return current_user

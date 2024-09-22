@@ -27,6 +27,10 @@ class LPInDBBase(Learning_path):
         orm_mode = True
 
 
+class LPupdate(BaseModel):
+    id: int
+    label: str
+
 # Properties to return to client
 class LP(LPInDBBase):
     pass
